@@ -15,14 +15,40 @@ The app is currently set up to print labels of a specific size, but the size can
 1. Clone the repository
 2. Install the dependencies (in the `label-printer` folder):
     - `npm install`
-3. Run `npm start` to start the app
+3. Run `npm start` for local HTTP development, or use `./launch.sh` to start the HTTPS server
+   accessible to devices on the local Wi-Fi network.
 
-Alternatively, run `./launch.sh` to install/update the dependencies and start the app in Google Chrome. If Chrome is already running, macOS reuses that app. Pass `--quick` to skip dependency installation and start immediately:
+`launch.sh` installs/updates dependencies, creates a local certificate with mkcert, and opens
+the app in Google Chrome. Install mkcert first (`brew install mkcert`). If Chrome is already
+running, macOS reuses that app. Pass `--quick` to skip dependency installation:
 
 ```sh
 ./launch.sh
 ./launch.sh --quick
 ```
+
+### Use from Android over local HTTPS
+
+The development server started by `./launch.sh` can be reached from a phone on the same Wi-Fi
+network. HTTPS is required for Web Bluetooth. The script creates a local certificate for the
+Mac's Wi-Fi IP address and prints the URL and mkcert CA location.
+
+To start the server without the launcher, first install [mkcert](https://github.com/FiloSottile/mkcert)
+and create a certificate for the current Wi-Fi IP (`ipconfig getifaddr en0`):
+
+```sh
+mkdir -p .cert
+mkcert -install
+mkcert -cert-file .cert/lan-cert.pem -key-file .cert/lan-key.pem "$(ipconfig getifaddr en0)" localhost 127.0.0.1
+npm run start:lan-https
+```
+
+On Android, install mkcert's `rootCA.pem` as a CA certificate. Its location is printed by
+`mkcert -CAROOT`; transfer only `rootCA.pem` to the phone, never `rootCA-key.pem`. In Android
+Security settings, choose **Install a certificate** / **CA certificate** (the exact labels vary
+by Android version). Then open the URL printed by the launcher in Chrome. Keep the phone and Mac
+on the same Wi-Fi network. The `.cert` directory contains local credentials and is excluded from
+Git.
 
 The **Text (15mm Continuous)** mode uses the same markdown formatting as Manual mode. Choose
 rotated text (along the tape) or normal, unrotated text. Start alignment places the text at the

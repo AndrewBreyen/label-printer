@@ -25,6 +25,16 @@ describe('text label mode', () => {
     jest.clearAllMocks();
   });
 
+  test('places the preview before the controls in 15mm continuous mode', () => {
+    const { container } = render(<App />);
+
+    fireEvent.change(screen.getByLabelText('Mode'), { target: { value: 'text' } });
+
+    expect(
+      container.querySelector('.app--continuous > .continuous-preview + .panel')
+    ).toBeInTheDocument();
+  });
+
   test('updates the live preview for normal orientation and the selected length', () => {
     render(<App />);
 

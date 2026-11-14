@@ -123,3 +123,86 @@ h1 {
   font-size: 12px;
   color: #888;
 }
+
+.app--continuous {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(180px, 280px);
+  grid-template-areas:
+    "heading preview"
+    "panel preview"
+    "actions actions"
+    "status status"
+    "note note";
+  column-gap: 32px;
+  align-items: start;
+  max-width: 900px;
+}
+
+.app--continuous > h1 {
+  grid-area: heading;
+}
+
+.app--continuous > .panel {
+  grid-area: panel;
+  width: 100%;
+}
+
+.app--continuous > .continuous-preview {
+  grid-area: preview;
+  position: sticky;
+  top: 24px;
+  width: 100%;
+  max-height: 60vh;
+  align-self: start;
+  overflow: auto;
+}
+
+.app--continuous .continuous-preview .label-canvas {
+  width: auto;
+  max-width: 100%;
+  max-height: 60vh;
+}
+
+.app--continuous > .actions {
+  grid-area: actions;
+}
+
+.app--continuous > .status {
+  grid-area: status;
+}
+
+.app--continuous > .hint {
+  grid-area: note;
+}
+
+@media (max-width: 640px) {
+  .app--continuous {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas:
+      "heading"
+      "preview"
+      "panel"
+      "actions"
+      "status"
+      "note";
+    gap: 0;
+    margin: 0 auto;
+    padding: 12px 16px 24px;
+  }
+
+  .app--continuous > h1 {
+    margin: 0 0 12px;
+  }
+
+  .app--continuous > .continuous-preview {
+    top: env(safe-area-inset-top, 0px);
+    z-index: 1;
+    margin: 0 0 16px;
+    padding: 8px;
+    background: #f4f4f4;
+  }
+
+  .app--continuous .continuous-preview .label-canvas {
+    max-height: 24vh;
+  }
+}

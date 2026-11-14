@@ -36,6 +36,7 @@ function App() {
   const [templateName, setTemplateName] = useState(DEFAULT_TEMPLATE_NAME);
   const template = LABEL_TEMPLATES[templateName];
   const isReceiptMode = mode === 'receipt';
+  const isContinuousMode = mode === 'barcode' || mode === 'text';
   const CONTENT_WIDTH = isReceiptMode ? LABEL_WIDTH : template.width;
   const CONTENT_LEFT = isReceiptMode ? 0 : LABEL_WIDTH - CONTENT_WIDTH;
   const contentHeight = isReceiptMode
@@ -558,9 +559,51 @@ function App() {
     (mode === 'text' && !textValue.trim()) ||
     (mode === 'image' && !imageLoaded);
 
+  const preview =
+    mode === 'image' ? (
+      imageLoaded ? (
+        <div className="preview">
+          <canvas
+            ref={imagePreviewCanvasRef}
+            width={LABEL_WIDTH}
+            height={imageHeight}
+            className="label-canvas"
+          />
+        </div>
+      ) : null
+    ) : mode === 'barcode' ? (
+      <div className="preview continuous-preview">
+        <canvas
+          ref={barcodePreviewCanvasRef}
+          width={TAPE_WIDTH_PX}
+          height={1}
+          className="label-canvas"
+        />
+      </div>
+    ) : mode === 'text' ? (
+      <div className="preview continuous-preview">
+        <canvas
+          ref={textPreviewCanvasRef}
+          width={TAPE_WIDTH_PX}
+          height={1}
+          className="label-canvas"
+        />
+      </div>
+    ) : (
+      <div className="preview">
+        <canvas
+          ref={previewCanvasRef}
+          width={CONTENT_WIDTH}
+          height={contentHeight}
+          className="label-canvas"
+        />
+      </div>
+    );
+
   return (
-    <div className="app">
+    <div className={`app${isContinuousMode ? ' app--continuous' : ''}`}>
       <h1>Label Printer</h1>
+      {isContinuousMode && preview}
 
       <div className="panel">
         <label className="field">
@@ -875,45 +918,7 @@ function App() {
 
       </div>
 
-      {mode === 'image' ? (
-        imageLoaded ? (
-          <div className="preview">
-            <canvas
-              ref={imagePreviewCanvasRef}
-              width={LABEL_WIDTH}
-              height={imageHeight}
-              className="label-canvas"
-            />
-          </div>
-        ) : null
-      ) : mode === 'barcode' ? (
-        <div className="preview">
-          <canvas
-            ref={barcodePreviewCanvasRef}
-            width={TAPE_WIDTH_PX}
-            height={1}
-            className="label-canvas"
-          />
-        </div>
-      ) : mode === 'text' ? (
-        <div className="preview">
-          <canvas
-            ref={textPreviewCanvasRef}
-            width={TAPE_WIDTH_PX}
-            height={1}
-            className="label-canvas"
-          />
-        </div>
-      ) : (
-        <div className="preview">
-          <canvas
-            ref={previewCanvasRef}
-            width={CONTENT_WIDTH}
-            height={contentHeight}
-            className="label-canvas"
-          />
-        </div>
-      )}
+      {!isContinuousMode && preview}
 
       {/* Full 384px-wide canvas at the full feed height — not shown,
           but must stay mounted since it's what actually gets sent to

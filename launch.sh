@@ -24,5 +24,22 @@ if [[ "${1:-}" != "--quick" ]]; then
   npm install --no-audit --no-fund
 fi
 
-(sleep 3; open -a "Google Chrome" http://localhost:3000) &
-BROWSER=none npm start 2>&1 | tee
+if ! command -v mkcert >/dev/null 2>&1; then
+  printf 'Error: mkcert is required for the local HTTPS certificate. Install it with: brew install mkcert\n' >&2
+  exit 1
+fi
+
+if ! LAN_IP="$(ipconfig getifaddr en0)" || [[ -z "$LAN_IP" ]]; then
+  printf 'Error: could not determine the Wi-Fi IP address for en0.\n' >&2
+  exit 1
+fi
+
+mkdir -p .cert
+mkcert -install
+mkcert -cert-file .cert/lan-cert.pem -key-file .cert/lan-key.pem "$LAN_IP" localhost 127.0.0.1
+
+printf 'Open https://%s:3001/label-printer on devices connected to this Wi-Fi network.\n' "$LAN_IP"
+printf 'To trust the certificate on Android, install rootCA.pem from: %s\n' "$(mkcert -CAROOT)"
+
+(sleep 3; open -a "Google Chrome" "https://$LAN_IP:3001/label-printer") &
+BROWSER=none npm run start:lan-https 2>&1 | tee
