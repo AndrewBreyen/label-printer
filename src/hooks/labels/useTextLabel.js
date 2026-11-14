@@ -4,6 +4,7 @@ import {
   PX_PER_MM,
   TAPE_WIDTH_PX,
 } from '../../utils/barcodeUtils';
+import { MIN_LENGTH_MM } from '../../utils/labelTemplates';
 import { generateTextCanvas } from '../../utils/textLabelUtils';
 
 export default function useTextLabel({
@@ -17,7 +18,7 @@ export default function useTextLabel({
   const [error, setError] = useState('');
   const [lengthMm, setLengthMm] = useState(null);
   const [orientation, setOrientation] = useState('rotated');
-  const [minimumLengthMm, setMinimumLengthMm] = useState(15);
+  const [minimumLengthMm, setMinimumLengthMm] = useState(MIN_LENGTH_MM);
   const [alignment, setAlignment] = useState('start');
   const printCanvasRef = useRef(null);
   const previewCanvasRef = useRef(null);

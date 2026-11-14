@@ -87,6 +87,20 @@ describe('generateTextCanvas', () => {
     );
   });
 
+  test('aligns visible ink to the right edge of rotated tape with zero margins', () => {
+    context.measureText.mockReturnValue({
+      width: 20,
+      actualBoundingBoxAscent: 9,
+      actualBoundingBoxDescent: 6,
+    });
+
+    generateTextCanvas('Hi', { alignment: 'start', marginMm: 0, minimumLengthMm: 15 });
+    expect(context.fillText).toHaveBeenCalledWith('Hi', 0, 9, 120);
+
+    generateTextCanvas('Hi', { alignment: 'end', marginMm: 0, minimumLengthMm: 15 });
+    expect(context.fillText).toHaveBeenCalledWith('Hi', 0, 114, 120);
+  });
+
   test('rejects whitespace-only text', () => {
     expect(() => generateTextCanvas('   ')).toThrow('Enter text to print.');
   });

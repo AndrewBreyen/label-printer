@@ -8,7 +8,7 @@ import StockNavigation from '../../components/navigation/StockNavigation';
 import EditorPanel from '../../components/editor/EditorPanel';
 import LabelPreview from '../../components/preview/LabelPreview';
 import PreviewCanvas from '../../components/preview/PreviewCanvas';
-import PrintActions from '../../components/actions/PrintActions';
+import PrinterConnection from '../../components/actions/PrinterConnection';
 import PrintTestButton from '../../components/actions/PrintTestButton';
 import useLabelEditor from './useLabelEditor';
 import useLabelPrinting from './useLabelPrinting';
@@ -89,14 +89,11 @@ export default function App() {
         </div>
       </header>
 
-      <PrintActions
+      <PrinterConnection
         connected={printer.connected}
         busy={printer.busy}
-        disabled={printer.printDisabled}
-        status={status}
         onConnect={printer.handleConnect}
         onDisconnect={printer.handleDisconnect}
-        onPrint={printer.onPrint}
       />
 
       <StockNavigation
@@ -164,6 +161,17 @@ export default function App() {
           onClick={printer.handlePrintRuler}
         />
       </footer>
+      <div className="floating-print">
+        {status && <p className="status-message" role="status">{status}</p>}
+        <button
+          type="button"
+          className="button button--primary"
+          onClick={printer.onPrint}
+          disabled={printer.printDisabled}
+        >
+          Print Label
+        </button>
+      </div>
     </div>
   );
 }

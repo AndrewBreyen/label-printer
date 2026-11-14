@@ -42,15 +42,19 @@ describe('text label mode', () => {
     expect(screen.getByRole('button', { name: 'Text' })).toBeInTheDocument();
   });
 
-  test('places printer actions directly below the app header', () => {
+  test('keeps connection controls at the top and the floating print action separate', () => {
     const { container } = render(<App />);
     const header = container.querySelector('.app-header');
     const toolbar = container.querySelector('.printer-toolbar');
 
     expect(header.nextElementSibling).toBe(toolbar);
     expect(toolbar.nextElementSibling).toHaveClass('stock-groups');
-    expect(screen.getByRole('button', { name: 'Print Label' })).toBeDisabled();
-    expect(screen.getByRole('button', { name: 'Connect Printer' })).toBeEnabled();
+    const printButton = screen.getByRole('button', { name: 'Print Label' });
+    const connectButton = screen.getByRole('button', { name: 'Connect Printer' });
+    expect(toolbar).toContainElement(connectButton);
+    expect(connectButton).toBeEnabled();
+    expect(printButton.parentElement).toHaveClass('floating-print');
+    expect(printButton).toBeDisabled();
     const printTestButton = screen.getByRole('button', { name: 'Print ruler test' });
     expect(toolbar).not.toContainElement(printTestButton);
     expect(printTestButton).toBeDisabled();
@@ -85,7 +89,7 @@ describe('text label mode', () => {
     expect(screen.getByRole('button', { name: 'Start' })).toHaveAttribute('aria-pressed', 'true');
     const previewCanvas = container.querySelector('.continuous-preview canvas');
     expect(previewCanvas).toHaveAttribute('width', '120');
-    expect(previewCanvas).toHaveAttribute('height', '120');
+    expect(previewCanvas).toHaveAttribute('height', '108');
   });
 
   test('applies font size and margin settings to the live text preview', () => {
@@ -98,7 +102,7 @@ describe('text label mode', () => {
 
     expect(screen.getByLabelText('Margins in millimeters')).toHaveValue('0');
     expect(context.font).toBe('bold 40px serif');
-    expect(context.fillText).toHaveBeenCalledWith('Hello World', 0, 26, 120);
+    expect(context.fillText).toHaveBeenCalledWith('Hello World', 0, 26, 88);
   });
 
   test('saves font, size, and margin settings with a content template', () => {
@@ -135,6 +139,8 @@ describe('text label mode', () => {
     context.drawImage.mockClear();
 
     fireEvent.click(screen.getByRole('button', { name: 'Horizontal' }));
+    expect(screen.getByLabelText('Minimum label length (mm)')).toHaveValue(8);
+    expect(screen.getByText('8 mm', { selector: '.preview-length' })).toBeInTheDocument();
     fireEvent.change(screen.getByLabelText('Minimum label length (mm)'), {
       target: { value: '20' },
     });

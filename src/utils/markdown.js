@@ -176,6 +176,7 @@ export function renderMarkdownContent(ctx, markdown, boxWidth, boxHeight, option
   const marginPx = options.marginPx ?? 10;
   const horizontalAlign = options.horizontalAlign ?? 'center';
   const verticalAlign = options.verticalAlign ?? 'center';
+  const alignInkToEdge = options.alignInkToEdge ?? false;
 
   if (!Number.isFinite(fontScale) || fontScale <= 0) {
     throw new Error('Font size must be a positive number.');
@@ -204,23 +205,47 @@ export function renderMarkdownContent(ctx, markdown, boxWidth, boxHeight, option
   if (!(verticalAlign in verticalOffsets) || !(horizontalAlign in horizontalPositions)) {
     throw new Error('Invalid markdown text alignment.');
   }
-  let y = verticalOffsets[verticalAlign] - yOffset;
-
   ctx.fillStyle = '#000000';
   ctx.textAlign = horizontalPositions[horizontalAlign].textAlign;
   ctx.textBaseline = 'middle';
 
-  const textX = horizontalPositions[horizontalAlign].x + xOffset;
+  const lines = [];
+  let lineTop = 0;
   for (const block of blocks) {
     if (block.type === 'space') {
-      y += block.height;
+      lineTop += block.height;
       continue;
     }
-    ctx.font = `${block.bold ? 'bold ' : ''}${block.fontSize}px ${fontFamily}`;
+    const font = `${block.bold ? 'bold ' : ''}${block.fontSize}px ${fontFamily}`;
     const lineHeight = Math.round(block.fontSize * LINE_HEIGHT_RATIO);
     for (const line of block.lines) {
-      ctx.fillText(line, textX, y + lineHeight / 2, maxTextWidth);
-      y += lineHeight;
+      lines.push({ line, font, baseline: lineTop + lineHeight / 2 });
+      lineTop += lineHeight;
     }
+  }
+
+  let offset = verticalOffsets[verticalAlign] - yOffset;
+  if (alignInkToEdge && verticalAlign !== 'center') {
+    let inkTop = Infinity;
+    let inkBottom = -Infinity;
+    for (const { line, font, baseline } of lines) {
+      if (!line.trim()) continue;
+      ctx.font = font;
+      const { actualBoundingBoxAscent, actualBoundingBoxDescent } = ctx.measureText(line);
+      if (!Number.isFinite(actualBoundingBoxAscent) || !Number.isFinite(actualBoundingBoxDescent)) {
+        continue;
+      }
+      inkTop = Math.min(inkTop, baseline - actualBoundingBoxAscent);
+      inkBottom = Math.max(inkBottom, baseline + actualBoundingBoxDescent);
+    }
+    if (Number.isFinite(inkTop) && inkBottom - inkTop <= boxHeight) {
+      offset = (verticalAlign === 'top' ? -inkTop : boxHeight - inkBottom) - yOffset;
+    }
+  }
+
+  const textX = horizontalPositions[horizontalAlign].x + xOffset;
+  for (const { line, font, baseline } of lines) {
+    ctx.font = font;
+    ctx.fillText(line, textX, baseline + offset, maxTextWidth);
   }
 }

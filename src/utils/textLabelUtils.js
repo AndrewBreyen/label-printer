@@ -84,6 +84,7 @@ export function generateTextCanvas(
       fontFamily,
       fontScale,
       marginPx,
+      alignInkToEdge: marginPx === 0,
     });
     context.restore();
   } else {
@@ -92,6 +93,7 @@ export function generateTextCanvas(
       fontFamily,
       fontScale,
       marginPx,
+      alignInkToEdge: marginPx === 0,
     });
   }
 
