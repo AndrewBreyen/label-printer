@@ -7,7 +7,7 @@ import {
   REQUIRED_IMAGE_WIDTH,
 } from './services/printerService';
 import { drawRulerTicks } from './rulerUtils';
-import { LABEL_TEMPLATES, DEFAULT_TEMPLATE_NAME } from './labelTemplates';
+import { LABEL_TEMPLATES, DEFAULT_TEMPLATE_NAME, MIN_LENGTH_MM } from './labelTemplates';
 import { useContentTemplates } from './contentTemplates';
 import { MARKDOWN_TEMPLATES } from './markdownTemplates';
 import { getMarkdownContentHeight, renderMarkdownContent } from './markdown';
@@ -21,7 +21,7 @@ import {
   BARCODE_HEIGHT_PX,
   CONTINUOUS_PAPER_TYPE,
 } from './barcodeUtils';
-import { generateTextCanvas } from './textLabelUtils';
+import { generateTextCanvas, MAX_TEXT_LABEL_LENGTH_MM } from './textLabelUtils';
 import { ditherImageData } from './imageUtils';
 import './App.css';
 
@@ -112,6 +112,9 @@ function App() {
   const [textValue, setTextValue] = useState('');
   const [textError, setTextError] = useState('');
   const [textLengthMm, setTextLengthMm] = useState(null);
+  const [textOrientation, setTextOrientation] = useState('rotated');
+  const [textMinimumLengthMm, setTextMinimumLengthMm] = useState(15);
+  const [textAlignment, setTextAlignment] = useState('start');
   const [imageFile, setImageFile] = useState(null);
   const [imageHeight, setImageHeight] = useState(1);
   const [imageLightenAmount, setImageLightenAmount] = useState(80);
@@ -334,16 +337,21 @@ function App() {
 
     setTextError('');
     setTextLengthMm(null);
+    printCanvas.width = LABEL_WIDTH;
+    printCanvas.height = 1;
+    previewCanvas.width = TAPE_WIDTH_PX;
+    previewCanvas.height = 1;
     if (!textValue.trim()) {
-      printCanvas.width = LABEL_WIDTH;
-      printCanvas.height = 1;
-      previewCanvas.width = TAPE_WIDTH_PX;
-      previewCanvas.height = 1;
       return;
     }
 
-    const textImage = generateTextCanvas(textValue);
-    const printLength = textImage.width;
+    const textImage = generateTextCanvas(textValue, {
+      orientation: textOrientation,
+      minimumLengthMm: textMinimumLengthMm,
+      alignment: textAlignment,
+    });
+    const rotated = textOrientation === 'rotated';
+    const printLength = rotated ? textImage.width : textImage.height;
     setTextLengthMm(printLength / BARCODE_PX_PER_MM);
 
     printCanvas.width = LABEL_WIDTH;
@@ -352,10 +360,14 @@ function App() {
     if (!printContext) throw new Error('Could not create the text label print canvas.');
     printContext.fillStyle = '#ffffff';
     printContext.fillRect(0, 0, printCanvas.width, printCanvas.height);
-    printContext.save();
-    printContext.translate(LABEL_WIDTH - TAPE_WIDTH_PX, 0);
-    drawRotatedCanvas(printContext, textImage);
-    printContext.restore();
+    if (rotated) {
+      printContext.save();
+      printContext.translate(LABEL_WIDTH - TAPE_WIDTH_PX, 0);
+      drawRotatedCanvas(printContext, textImage);
+      printContext.restore();
+    } else {
+      printContext.drawImage(textImage, LABEL_WIDTH - TAPE_WIDTH_PX, 0);
+    }
 
     previewCanvas.width = TAPE_WIDTH_PX;
     previewCanvas.height = printLength;
@@ -363,8 +375,9 @@ function App() {
     if (!previewContext) throw new Error('Could not create the text label preview canvas.');
     previewContext.fillStyle = '#ffffff';
     previewContext.fillRect(0, 0, previewCanvas.width, previewCanvas.height);
-    drawRotatedCanvas(previewContext, textImage);
-  }, [textValue]);
+    if (rotated) drawRotatedCanvas(previewContext, textImage);
+    else previewContext.drawImage(textImage, 0, 0);
+  }, [textValue, textOrientation, textMinimumLengthMm, textAlignment]);
 
   useEffect(() => {
     if (mode !== 'text') return;
@@ -559,7 +572,7 @@ function App() {
             <option value="receipt">58mm Receipt</option>
             <option value="image">Image (58mm Continuous)</option>
             <option value="barcode">Barcode (15mm Continuous)</option>
-            <option value="text">Rotated Text (15mm Continuous)</option>
+            <option value="text">Text (15mm Continuous)</option>
           </select>
         </label>
 
@@ -784,6 +797,7 @@ function App() {
               <span>Text to print</span>
               <textarea
                 className="markdown-input"
+                aria-label="Text to print"
                 value={textValue}
                 onChange={(e) => setTextValue(e.target.value)}
                 placeholder={'# Big heading\n## Smaller heading\nBody text'}
@@ -796,10 +810,49 @@ function App() {
               </p>
             </label>
 
+            <label className="field">
+              <span>Text orientation</span>
+              <select
+                value={textOrientation}
+                onChange={(event) => setTextOrientation(event.target.value)}
+              >
+                <option value="rotated">Rotated 90° (along the tape)</option>
+                <option value="normal">Normal (not rotated)</option>
+              </select>
+            </label>
+
+            <label className="field">
+              <span>Minimum label length (mm)</span>
+              <input
+                type="number"
+                aria-label="Minimum label length (mm)"
+                min={MIN_LENGTH_MM}
+                max={MAX_TEXT_LABEL_LENGTH_MM}
+                step="1"
+                value={textMinimumLengthMm}
+                onChange={(event) => setTextMinimumLengthMm(Number(event.target.value))}
+              />
+              <span className="hint">
+                The label grows automatically if the text needs more room.
+              </span>
+            </label>
+
+            <label className="field">
+              <span>Alignment along label length</span>
+              <select
+                value={textAlignment}
+                onChange={(event) => setTextAlignment(event.target.value)}
+              >
+                <option value="start">Start (top of preview)</option>
+                <option value="center">Center</option>
+                <option value="end">End</option>
+              </select>
+            </label>
+
             {textError && <p className="status">{textError}</p>}
             <p className="hint">
-              Printed rotated 90° along the 15mm tape. The label length follows the widest text
-              line.
+              Start alignment puts text at the beginning of the label without blank lines. The
+              preview updates as you type or change these settings.
             </p>
             {textLengthMm !== null && (
               <p className="hint">Calculated print length: {textLengthMm.toFixed(1)} mm</p>

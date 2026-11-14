@@ -24,8 +24,11 @@ Alternatively, run `./launch.sh` to install/update the dependencies and start th
 ./launch.sh --quick
 ```
 
-The **Rotated Text (15mm Continuous)** mode uses the same markdown formatting as Manual mode,
-rotated 90° along the tape. Its print length is calculated from the widest rendered text line.
+The **Text (15mm Continuous)** mode uses the same markdown formatting as Manual mode. Choose
+rotated text (along the tape) or normal, unrotated text. Start alignment places the text at the
+beginning of the label without adding blank lines. Set a minimum label length in millimeters;
+the label grows automatically when the content needs more room. The preview updates as you edit
+the text or its settings.
 
 The **58mm Receipt** mode uses the Manual mode markdown editor and prints on continuous receipt
 paper at the printer's full 384-dot image width. The receipt length adjusts to the markdown

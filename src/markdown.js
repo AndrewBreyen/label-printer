@@ -164,6 +164,8 @@ export function renderMarkdownContent(ctx, markdown, boxWidth, boxHeight, option
   const xOffset = options.xOffset ?? 0;
   const yOffset = options.yOffset ?? 0;
   const fontFamily = options.fontFamily ?? 'sans-serif';
+  const horizontalAlign = options.horizontalAlign ?? 'center';
+  const verticalAlign = options.verticalAlign ?? 'center';
 
   ctx.fillStyle = '#ffffff';
   ctx.fillRect(0, 0, boxWidth, boxHeight);
@@ -172,13 +174,26 @@ export function renderMarkdownContent(ctx, markdown, boxWidth, boxHeight, option
   const blocks = getLaidOutBlocks(markdown, ctx, maxTextWidth, fontFamily);
 
   const totalHeight = blocks.reduce((sum, b) => sum + b.height, 0);
-  let y = (boxHeight - totalHeight) / 2 - yOffset;
+  const verticalOffsets = {
+    top: 10,
+    center: (boxHeight - totalHeight) / 2,
+    bottom: boxHeight - totalHeight - 10,
+  };
+  const horizontalPositions = {
+    left: { textAlign: 'left', x: 10 },
+    center: { textAlign: 'center', x: boxWidth / 2 },
+    right: { textAlign: 'right', x: boxWidth - 10 },
+  };
+  if (!(verticalAlign in verticalOffsets) || !(horizontalAlign in horizontalPositions)) {
+    throw new Error('Invalid markdown text alignment.');
+  }
+  let y = verticalOffsets[verticalAlign] - yOffset;
 
   ctx.fillStyle = '#000000';
-  ctx.textAlign = 'center';
+  ctx.textAlign = horizontalPositions[horizontalAlign].textAlign;
   ctx.textBaseline = 'middle';
 
-  const centerX = boxWidth / 2 + xOffset;
+  const textX = horizontalPositions[horizontalAlign].x + xOffset;
   for (const block of blocks) {
     if (block.type === 'space') {
       y += block.height;
@@ -187,7 +202,7 @@ export function renderMarkdownContent(ctx, markdown, boxWidth, boxHeight, option
     ctx.font = `${block.bold ? 'bold ' : ''}${block.fontSize}px ${fontFamily}`;
     const lineHeight = Math.round(block.fontSize * LINE_HEIGHT_RATIO);
     for (const line of block.lines) {
-      ctx.fillText(line, centerX, y + lineHeight / 2, maxTextWidth);
+      ctx.fillText(line, textX, y + lineHeight / 2, maxTextWidth);
       y += lineHeight;
     }
   }
