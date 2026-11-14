@@ -50,15 +50,24 @@ by Android version). Then open the URL printed by the launcher in Chrome. Keep t
 on the same Wi-Fi network. The `.cert` directory contains local credentials and is excluded from
 Git.
 
-The **Text (15mm Continuous)** mode uses the same markdown formatting as Manual mode. Choose
-rotated text (along the tape) or normal, unrotated text. Start alignment places the text at the
-beginning of the label without adding blank lines. Set a minimum label length in millimeters;
-the label grows automatically when the content needs more room. The preview updates as you edit
-the text or its settings.
+The app's workflow is grouped by stock size: **Small labels** has a custom editor with built-in
+and saved templates, plus **Prep label**; **58 mm continuous** has **Receipt** and **Image**;
+**15 mm continuous** has **Text** and **Barcode**. The live preview sits beside the settings on
+desktop and above them on mobile.
 
-The **58mm Receipt** mode uses the Manual mode markdown editor and prints on continuous receipt
-paper at the printer's full 384-dot image width. The receipt length adjusts to the markdown
-content.
+The **Text** workflow supports markdown, rotated text along the tape or normal text across it,
+start/center/end alignment, and a minimum length. Labels grow automatically when the content
+needs more room.
+
+Markdown-based workflows also include sans-serif, serif, and monospace fonts; small, standard,
+and large text sizing; and an adjustable 0–5 mm margin slider with a **No margins** shortcut.
+Markdown headings retain their relative sizes, and saved templates remember their typography and
+margin settings. Receipt mode defaults to monospace.
+
+The **Barcode** workflow encodes Code 128 values on 15 mm continuous tape.
+
+The **Receipt** workflow prints markdown on continuous receipt paper at the printer's full
+384-dot image width. The receipt length adjusts to its content.
 
 The **Image (58mm Continuous)** mode accepts PNG, JPEG, WebP, and GIF images. Images are converted
 to dithered black and white, scaled to the printer's full 384-dot width with their aspect ratio

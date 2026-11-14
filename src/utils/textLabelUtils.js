@@ -11,7 +11,14 @@ export const MAX_TEXT_LABEL_LENGTH_MM = 1000;
 /** Creates a 15mm-wide label canvas in rotated or normal text orientation. */
 export function generateTextCanvas(
   markdown,
-  { orientation = 'rotated', minimumLengthMm = MIN_LENGTH_MM, alignment = 'start' } = {}
+  {
+    orientation = 'rotated',
+    minimumLengthMm = MIN_LENGTH_MM,
+    alignment = 'start',
+    fontFamily = 'sans-serif',
+    fontScale = 1,
+    marginMm = 1.25,
+  } = {}
 ) {
   if (!markdown.trim()) {
     throw new Error('Enter text to print.');
@@ -30,12 +37,20 @@ export function generateTextCanvas(
   if (!['start', 'center', 'end'].includes(alignment)) {
     throw new Error('Choose a valid label alignment.');
   }
+  const marginPx = marginMm * PX_PER_MM;
+  if (!Number.isFinite(fontScale) || fontScale <= 0) {
+    throw new Error('Font size must be a positive number.');
+  }
+  if (!Number.isFinite(marginMm) || marginMm < 0 || marginPx * 2 >= TAPE_WIDTH_PX) {
+    throw new Error('Margins must be non-negative and leave room for text.');
+  }
 
   const minimumLengthPx = Math.ceil(minimumLengthMm * PX_PER_MM);
   const rotated = orientation === 'rotated';
   const requiredLength = rotated
-    ? getMarkdownContentWidth(markdown)
-    : getMarkdownContentHeight(markdown, TAPE_WIDTH_PX);
+    ? getMarkdownContentWidth(markdown, { fontFamily, fontScale, marginPx })
+    : getMarkdownContentHeight(markdown, TAPE_WIDTH_PX, fontFamily, fontScale, marginPx) +
+      marginPx * 2;
   if (requiredLength <= 0) {
     throw new Error('Could not measure the text label.');
   }
@@ -52,7 +67,13 @@ export function generateTextCanvas(
   }
 
   if (rotated) {
-    const contentHeight = getMarkdownContentHeight(markdown, canvas.width);
+    const contentHeight = getMarkdownContentHeight(
+      markdown,
+      canvas.width,
+      fontFamily,
+      fontScale,
+      marginPx
+    );
     const layoutHeight = Math.max(TAPE_WIDTH_PX, contentHeight);
     const verticalScale = TAPE_WIDTH_PX / layoutHeight;
     context.save();
@@ -60,11 +81,17 @@ export function generateTextCanvas(
     renderMarkdownContent(context, markdown, canvas.width, layoutHeight, {
       horizontalAlign: alignment === 'start' ? 'left' : alignment === 'end' ? 'right' : 'center',
       verticalAlign: 'top',
+      fontFamily,
+      fontScale,
+      marginPx,
     });
     context.restore();
   } else {
     renderMarkdownContent(context, markdown, canvas.width, canvas.height, {
       verticalAlign: alignment === 'start' ? 'top' : alignment === 'end' ? 'bottom' : 'center',
+      fontFamily,
+      fontScale,
+      marginPx,
     });
   }
 

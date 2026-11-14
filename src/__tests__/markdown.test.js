@@ -1,4 +1,4 @@
-import { getMarkdownContentHeight, renderMarkdownContent } from './markdown';
+import { getMarkdownContentHeight, renderMarkdownContent } from '../utils/markdown';
 
 describe('markdown text wrapping', () => {
   const context = {

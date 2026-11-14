@@ -27,10 +27,10 @@ const FONT_SIZES = { h1: 32, h2: 22, body: 18 };
 const LINE_HEIGHT_RATIO = 1.3;
 const BLANK_LINE_GAP = 10;
 
-function getMarkdownBlocks(markdown) {
+function getMarkdownBlocks(markdown, fontScale = 1) {
   return parseMarkdownLines(markdown).map((line) => {
     if (line.type === 'space') return { type: 'space', height: BLANK_LINE_GAP };
-    const fontSize = FONT_SIZES[line.type];
+    const fontSize = Math.round(FONT_SIZES[line.type] * fontScale);
     return {
       type: line.type,
       text: resolvePlaceholders(line.text),
@@ -81,8 +81,8 @@ function wrapText(context, text, maxWidth) {
   return lines;
 }
 
-function getLaidOutBlocks(markdown, context, maxWidth, fontFamily) {
-  return getMarkdownBlocks(markdown).map((block) => {
+function getLaidOutBlocks(markdown, context, maxWidth, fontFamily, fontScale) {
+  return getMarkdownBlocks(markdown, fontScale).map((block) => {
     if (block.type === 'space') return { ...block, lines: [] };
     context.font = `${block.bold ? 'bold ' : ''}${block.fontSize}px ${fontFamily}`;
     const lines = wrapText(context, block.text, maxWidth);
@@ -125,32 +125,40 @@ export function parseMarkdownLines(markdown) {
 }
 
 /** Returns the vertical space required to render markdown, optionally wrapping to a width. */
-export function getMarkdownContentHeight(markdown, boxWidth, fontFamily = 'sans-serif') {
+export function getMarkdownContentHeight(
+  markdown,
+  boxWidth,
+  fontFamily = 'sans-serif',
+  fontScale = 1,
+  marginPx = 10
+) {
   if (boxWidth === undefined) {
-    return getMarkdownBlocks(markdown).reduce((sum, block) => sum + block.height, 0);
+    return getMarkdownBlocks(markdown, fontScale).reduce((sum, block) => sum + block.height, 0);
   }
   const canvas = document.createElement('canvas');
   const context = canvas.getContext('2d');
   if (!context) throw new Error('Could not create a canvas context to measure markdown.');
-  return getLaidOutBlocks(markdown, context, boxWidth - 20, fontFamily).reduce(
+  return getLaidOutBlocks(markdown, context, boxWidth - marginPx * 2, fontFamily, fontScale).reduce(
     (sum, block) => sum + block.height,
     0
   );
 }
 
 /** Returns the horizontal space required by the widest rendered markdown line. */
-export function getMarkdownContentWidth(markdown) {
+export function getMarkdownContentWidth(markdown, options = {}) {
   const measureCanvas = document.createElement('canvas');
   const context = measureCanvas.getContext('2d');
   if (!context) return 0;
+  const fontFamily = options.fontFamily ?? 'sans-serif';
+  const fontScale = options.fontScale ?? 1;
+  const marginPx = options.marginPx ?? 10;
 
-  const widestLine = getMarkdownBlocks(markdown).reduce((maxWidth, block) => {
+  const widestLine = getMarkdownBlocks(markdown, fontScale).reduce((maxWidth, block) => {
     if (block.type === 'space') return maxWidth;
-    context.font = `${block.bold ? 'bold ' : ''}${block.fontSize}px sans-serif`;
+    context.font = `${block.bold ? 'bold ' : ''}${block.fontSize}px ${fontFamily}`;
     return Math.max(maxWidth, context.measureText(block.text).width);
   }, 0);
-  // renderMarkdownContent reserves 10px on each side for its max-width.
-  return widestLine + 20;
+  return widestLine + marginPx * 2;
 }
 
 /**
@@ -164,25 +172,34 @@ export function renderMarkdownContent(ctx, markdown, boxWidth, boxHeight, option
   const xOffset = options.xOffset ?? 0;
   const yOffset = options.yOffset ?? 0;
   const fontFamily = options.fontFamily ?? 'sans-serif';
+  const fontScale = options.fontScale ?? 1;
+  const marginPx = options.marginPx ?? 10;
   const horizontalAlign = options.horizontalAlign ?? 'center';
   const verticalAlign = options.verticalAlign ?? 'center';
+
+  if (!Number.isFinite(fontScale) || fontScale <= 0) {
+    throw new Error('Font size must be a positive number.');
+  }
+  if (!Number.isFinite(marginPx) || marginPx < 0 || marginPx * 2 >= boxWidth) {
+    throw new Error('Margins must be non-negative and leave room for text.');
+  }
 
   ctx.fillStyle = '#ffffff';
   ctx.fillRect(0, 0, boxWidth, boxHeight);
 
-  const maxTextWidth = boxWidth - 20;
-  const blocks = getLaidOutBlocks(markdown, ctx, maxTextWidth, fontFamily);
+  const maxTextWidth = boxWidth - marginPx * 2;
+  const blocks = getLaidOutBlocks(markdown, ctx, maxTextWidth, fontFamily, fontScale);
 
   const totalHeight = blocks.reduce((sum, b) => sum + b.height, 0);
   const verticalOffsets = {
-    top: 10,
+    top: marginPx,
     center: (boxHeight - totalHeight) / 2,
-    bottom: boxHeight - totalHeight - 10,
+    bottom: boxHeight - totalHeight - marginPx,
   };
   const horizontalPositions = {
-    left: { textAlign: 'left', x: 10 },
+    left: { textAlign: 'left', x: marginPx },
     center: { textAlign: 'center', x: boxWidth / 2 },
-    right: { textAlign: 'right', x: boxWidth - 10 },
+    right: { textAlign: 'right', x: boxWidth - marginPx },
   };
   if (!(verticalAlign in verticalOffsets) || !(horizontalAlign in horizontalPositions)) {
     throw new Error('Invalid markdown text alignment.');

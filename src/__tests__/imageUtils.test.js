@@ -1,4 +1,4 @@
-import { ditherImageData } from './imageUtils';
+import { ditherImageData } from '../utils/imageUtils';
 
 describe('ditherImageData', () => {
   test('converts image pixels to opaque black and white', () => {

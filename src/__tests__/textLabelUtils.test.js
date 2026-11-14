@@ -1,4 +1,4 @@
-import { generateTextCanvas } from './textLabelUtils';
+import { generateTextCanvas } from '../utils/textLabelUtils';
 
 describe('generateTextCanvas', () => {
   const context = {
@@ -59,6 +59,24 @@ describe('generateTextCanvas', () => {
 
     generateTextCanvas('Hi', { minimumLengthMm: 20, alignment: 'end' });
     expect(context.fillText).toHaveBeenCalledWith('Hi', 150, 21.5, 140);
+  });
+
+  test('applies the selected font scale and allows zero margins', () => {
+    const canvas = generateTextCanvas('# Hi', {
+      fontFamily: 'serif',
+      fontScale: 1.25,
+      marginMm: 0,
+    });
+
+    expect(canvas.width).toBe(64);
+    expect(context.font).toBe('bold 40px serif');
+    expect(context.fillText).toHaveBeenCalledWith('Hi', 0, 26, 64);
+  });
+
+  test('rejects margins that leave no room for text', () => {
+    expect(() => generateTextCanvas('Hi', { marginMm: 7.5 })).toThrow(
+      'Margins must be non-negative and leave room for text.'
+    );
   });
 
   test('rejects whitespace-only text', () => {
