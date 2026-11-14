@@ -79,8 +79,8 @@ export function generateTextCanvas(
     context.save();
     if (verticalScale < 1) context.scale(1, verticalScale);
     renderMarkdownContent(context, markdown, canvas.width, layoutHeight, {
-      horizontalAlign: alignment === 'start' ? 'left' : alignment === 'end' ? 'right' : 'center',
-      verticalAlign: 'top',
+      horizontalAlign: 'left',
+      verticalAlign: alignment === 'start' ? 'top' : alignment === 'end' ? 'bottom' : 'center',
       fontFamily,
       fontScale,
       marginPx,

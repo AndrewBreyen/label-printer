@@ -54,11 +54,19 @@ describe('generateTextCanvas', () => {
   });
 
   test('supports centered and end alignment on the label length', () => {
+    generateTextCanvas('Hi', { orientation: 'normal', minimumLengthMm: 20, alignment: 'center' });
+    expect(context.fillText).toHaveBeenCalledWith('Hi', 60, 80, 100);
+
+    generateTextCanvas('Hi', { orientation: 'normal', minimumLengthMm: 20, alignment: 'end' });
+    expect(context.fillText).toHaveBeenCalledWith('Hi', 60, 138.5, 100);
+  });
+
+  test('aligns rotated text across the tape width', () => {
     generateTextCanvas('Hi', { minimumLengthMm: 20, alignment: 'center' });
-    expect(context.fillText).toHaveBeenCalledWith('Hi', 80, 21.5, 140);
+    expect(context.fillText).toHaveBeenCalledWith('Hi', 10, 60, 140);
 
     generateTextCanvas('Hi', { minimumLengthMm: 20, alignment: 'end' });
-    expect(context.fillText).toHaveBeenCalledWith('Hi', 150, 21.5, 140);
+    expect(context.fillText).toHaveBeenCalledWith('Hi', 10, 98.5, 140);
   });
 
   test('applies the selected font scale and allows zero margins', () => {

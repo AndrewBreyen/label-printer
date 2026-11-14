@@ -214,23 +214,59 @@ function TextControls({ text }) {
         />
         <span className="hint">The label grows automatically if the text needs more room.</span>
       </label>
-      <label className="field">
-        <span>Alignment along label length</span>
-        <select
-          value={text.alignment}
-          onChange={(event) => text.setAlignment(event.target.value)}
-        >
-          <option value="start">Start (top of preview)</option>
-          <option value="center">Center</option>
-          <option value="end">End</option>
-        </select>
-      </label>
       {text.error && <p className="inline-error" role="alert">{text.error}</p>}
-      <p className="hint">
-        Start alignment puts text at the beginning of the label without blank lines. The preview
-        updates as you type or change these settings.
-      </p>
     </>
+  );
+}
+
+function TextLayoutControls({ text }) {
+  const alignmentAxis =
+    text.orientation === 'rotated' ? 'Alignment across label width' : 'Alignment along label length';
+
+  return (
+    <div className="text-toolbar">
+      <div className="text-toolbar-control">
+        <span id="text-orientation-label">Text orientation</span>
+        <div className="orientation-picker" role="group" aria-labelledby="text-orientation-label">
+          <button
+            type="button"
+            className={`orientation-choice${text.orientation === 'normal' ? ' is-selected' : ''}`}
+            aria-pressed={text.orientation === 'normal'}
+            onClick={() => text.setOrientation('normal')}
+          >
+            Horizontal
+          </button>
+          <button
+            type="button"
+            className={`orientation-choice${text.orientation === 'rotated' ? ' is-selected' : ''}`}
+            aria-pressed={text.orientation === 'rotated'}
+            onClick={() => text.setOrientation('rotated')}
+          >
+            Vertical
+          </button>
+        </div>
+      </div>
+      <div className="text-toolbar-control">
+        <span id="text-alignment-label">{alignmentAxis}</span>
+        <div className="orientation-picker alignment-picker" role="group" aria-labelledby="text-alignment-label">
+          {[
+            { value: 'start', label: 'Start' },
+            { value: 'center', label: 'Center' },
+            { value: 'end', label: 'End' },
+          ].map((option) => (
+            <button
+              key={option.value}
+              type="button"
+              className={`orientation-choice${text.alignment === option.value ? ' is-selected' : ''}`}
+              aria-pressed={text.alignment === option.value}
+              onClick={() => text.setAlignment(option.value)}
+            >
+              {option.label}
+            </button>
+          ))}
+        </div>
+      </div>
+    </div>
   );
 }
 
@@ -251,27 +287,7 @@ export default function EditorPanel({
   return (
     <div className="panel">
       {mode === 'text' ? (
-        <div className="orientation-toolbar">
-          <span id="text-orientation-label">Text orientation</span>
-          <div className="orientation-picker" role="group" aria-labelledby="text-orientation-label">
-            <button
-              type="button"
-              className={`orientation-choice${text.orientation === 'normal' ? ' is-selected' : ''}`}
-              aria-pressed={text.orientation === 'normal'}
-              onClick={() => text.setOrientation('normal')}
-            >
-              Horizontal
-            </button>
-            <button
-              type="button"
-              className={`orientation-choice${text.orientation === 'rotated' ? ' is-selected' : ''}`}
-              aria-pressed={text.orientation === 'rotated'}
-              onClick={() => text.setOrientation('rotated')}
-            >
-              Vertical
-            </button>
-          </div>
-        </div>
+        <TextLayoutControls text={text} />
       ) : (
         <div className="panel-heading">
           <div>

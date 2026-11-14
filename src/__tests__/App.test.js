@@ -81,6 +81,8 @@ describe('text label mode', () => {
 
     expect(screen.getByLabelText('Text to print')).toHaveValue('# Hello World');
     expect(screen.getByRole('button', { name: 'Vertical' })).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getByText('Alignment across label width')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Start' })).toHaveAttribute('aria-pressed', 'true');
     const previewCanvas = container.querySelector('.continuous-preview canvas');
     expect(previewCanvas).toHaveAttribute('width', '120');
     expect(previewCanvas).toHaveAttribute('height', '120');
@@ -124,7 +126,9 @@ describe('text label mode', () => {
     const { container } = render(<App />);
 
     selectMode('15 mm continuous', 'Text');
-    expect(container.querySelector('.panel').firstElementChild).toHaveClass('orientation-toolbar');
+    const textToolbar = container.querySelector('.text-toolbar');
+    expect(container.querySelector('.panel').firstElementChild).toBe(textToolbar);
+    expect(textToolbar.querySelectorAll('.text-toolbar-control')).toHaveLength(2);
     expect(container.querySelector('.panel-heading')).not.toBeInTheDocument();
     fireEvent.change(screen.getByLabelText('Text to print'), { target: { value: 'Hi' } });
     context.rotate.mockClear();
@@ -139,6 +143,7 @@ describe('text label mode', () => {
       'aria-pressed',
       'true'
     );
+    expect(screen.getByText('Alignment along label length')).toBeInTheDocument();
     expect(container.querySelector('.preview-length')).toHaveTextContent('20 mm');
     expect(context.drawImage).toHaveBeenCalled();
     expect(context.rotate).not.toHaveBeenCalled();
