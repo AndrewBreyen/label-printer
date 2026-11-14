@@ -30,7 +30,10 @@ export default function usePrinterActions({
     setStatus('');
     setBusy(true);
     try {
-      await connectPrinter();
+      await connectPrinter(() => {
+        setConnected(false);
+        setStatus('Printer disconnected.');
+      });
       setConnected(true);
       setStatus('Printer connected.');
     } catch (err) {

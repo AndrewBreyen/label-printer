@@ -318,7 +318,6 @@ button {
   resize: vertical;
   line-height: 1.55;
   font-family: "SF Mono", Menlo, Consolas, monospace;
-  font-size: 14px;
 }
 
 .field-hint,

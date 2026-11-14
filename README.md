@@ -10,7 +10,7 @@ The app is currently set up to print labels of a specific size, but the size can
 
 ## Usage
 
-!> **Note**: You MUST use Chrome to be able to connect to the printer.
+!> **Web printing** requires a browser with Web Bluetooth, such as desktop Chrome or Chrome for Android.
 
 1. Clone the repository
 2. Install the dependencies (in the `label-printer` folder):
@@ -74,6 +74,17 @@ to dithered black and white, scaled to the printer's full 384-dot width with the
 preserved, then printed on continuous roll paper. Use the **Lighten image** slider to add
 brightness before dithering; increasing it reduces the amount of black ink in the print. The
 preview reflects the current setting.
+
+## Install on an iPhone
+
+The iOS app bundles the label editor locally and connects to the MarkLife P50S using native Bluetooth Low Energy. It requires iOS 15 or later. Building it requires a Mac with Xcode 26 or later and Node.js 22 or later.
+
+1. Run `npm ci`, then `npm run ios:sync` to build the web assets and sync them to the Xcode project.
+2. Run `npm run ios:open`. In Xcode, choose the **App** target and select your team under **Signing & Capabilities**. A free Apple account works for personal device testing.
+3. Connect and unlock your iPhone, select it as the run destination, and press **Run**. Enable Developer Mode if the iPhone prompts you.
+4. Open **Label Printer**, tap **Connect Printer**, grant Bluetooth access, and select your P50S. Print a small label to verify the connection.
+
+Run `npm run ios:sync` again before rebuilding in Xcode after changes to the React app. The hosted build still uses `npm run build`.
 
 ## Attributions
 

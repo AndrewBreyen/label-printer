@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { REQUIRED_IMAGE_WIDTH } from '../../services/printerService';
+import { isNativeIOS, REQUIRED_IMAGE_WIDTH } from '../../services/printerService';
 import { LABEL_TEMPLATES, DEFAULT_TEMPLATE_NAME } from '../../utils/labelTemplates';
 import { getMarkdownContentHeight } from '../../utils/markdown';
 import { PX_PER_MM } from '../../utils/barcodeUtils';
@@ -155,10 +155,9 @@ export default function App() {
       ))}
 
       <footer className="app-footer">
-        <span>
-          Requires Chrome or Edge over HTTPS (or localhost) — Web Bluetooth isn't supported in
-          Safari or Firefox.
-        </span>
+        {!isNativeIOS && (
+          <span>Web printing requires Chrome or Edge over HTTPS (or localhost).</span>
+        )}
         <PrintTestButton
           connected={printer.connected}
           busy={printer.busy}

@@ -1,129 +1,62 @@
-/**
- * printerService.js
- * ------------------
- * Web Bluetooth driver for MarkLife label printers, built on top of
- * `marklife-label-printer-web-kit`'s `PrintPort` command builders.
- *
- * This version is based directly on the package's actual README
- * ("Method 2: Advanced Usage"), which we obtained from the real
- * installed package (v1.1.4) rather than reverse-engineering guesses.
- * Confirmed facts from that README:
- *
- *  - The library was specifically tested against the P50S printer.
- *  - Flow control uses credit-based pacing on UUID 0xFF03.
- *  - Data is chunked in fixed 90-byte pieces.
- *  - Images must be exactly 384px wide (P50S firmware requirement).
- *  - The documented low-level payload is ONE concatenated buffer:
- *      setPaperType -> startPrintjob -> alignPaperStart ->
- *      [image data] -> stopPrintjob -> alignPaperEnd
- *    sent as a single chunked/paced stream — not as separate writes
- *    per command like earlier versions of this file did.
- *  - No calibration command appears anywhere in the documented flow.
- *    Earlier gap-calibration attempts (learnPaper, printerLocation)
- *    aren't part of the intended usage — dropped for now. If
- *    alignment issues persist after this fix, that's the next thing
- *    to revisit, but this more fundamental payload/width correction
- *    should be tested first.
- *
- * The BLE connection itself (service/characteristic UUIDs, notify
- * subscriptions) still isn't documented in the README — it assumes
- * you already have a connected characteristic. That part remains
- * reconstructed from lib/archive/original_interface_chinese.js,
- * which is a reasonably solid source since it's the printer
- * manufacturer's own original SDK.
- */
-
 import { PrintPort } from 'marklife-label-printer-web-kit';
+import { isNativeIOS, openPrinterConnection } from './printerConnection';
 
 const SERVICE_UUID = '0000ff00-0000-1000-8000-00805f9b34fb';
 const WRITE_CHAR_UUID = '0000ff02-0000-1000-8000-00805f9b34fb';
-const NOTIFY_CHAR_UUID_A = '0000ff03-0000-1000-8000-00805f9b34fb'; // credit grants
-const NOTIFY_CHAR_UUID_B = '0000ff01-0000-1000-8000-00805f9b34fb';
+const CREDIT_CHAR_UUID = '0000ff03-0000-1000-8000-00805f9b34fb'; // credit grants
+const STATUS_CHAR_UUID = '0000ff01-0000-1000-8000-00805f9b34fb';
 
 const CHUNK_SIZE = 90; // README: "Automatically splits data into optimal chunks (90 bytes)"
 export const REQUIRED_IMAGE_WIDTH = 384; // README: "P50S Specifics: enforces a 384px width"
 const PRINT_SPEED = 0; // SDK: 0 = low, 1 = medium, 2 = high
 
-let state = null; // { device, server, writeChar, credit }
+let state = null;
 
-/**
- * Opens the browser's Bluetooth device picker and connects to a
- * MarkLife printer. Must be called from inside a user gesture
- * (e.g. a button onClick).
- */
-export async function connectPrinter() {
-  if (!navigator.bluetooth) {
-    throw new Error(
-      'Web Bluetooth is not available in this browser. Use Chrome or Edge over HTTPS (or localhost).'
-    );
+export { isNativeIOS };
+
+export async function connectPrinter(onDisconnect = () => {}) {
+  if (state) throw new Error('A printer connection is already open or in progress.');
+
+  const session = { connection: null, credit: 0 };
+  state = session;
+  try {
+    session.connection = await openPrinterConnection({
+      service: SERVICE_UUID,
+      write: WRITE_CHAR_UUID,
+      credit: CREDIT_CHAR_UUID,
+      status: STATUS_CHAR_UUID,
+      chunkSize: CHUNK_SIZE,
+      onCredit(bytes) {
+        if (bytes.length >= 2 && bytes[0] === 0x01) {
+          // A grant of four resets the printer's credit window.
+          session.credit = bytes[1] === 4 ? 4 : session.credit + bytes[1];
+        }
+      },
+      onStatus: (bytes) => console.log('[printer] notify (ff01):', bytes),
+      onDisconnect() {
+        if (state === session) {
+          state = null;
+          onDisconnect();
+        }
+      },
+    });
+    if (state !== session) throw new Error('Printer disconnected during setup.');
+    return session.connection.device;
+  } catch (error) {
+    if (state === session) state = null;
+    throw error;
   }
-
-  console.log('[printer] requesting device...');
-  const device = await navigator.bluetooth.requestDevice({
-    // Matches the reference handler exactly (examples/handlers/browser-handler.js).
-    filters: [
-      { namePrefix: 'P50' },
-      { namePrefix: 'Marklife' },
-      { namePrefix: 'Printer' },
-    ],
-    optionalServices: [SERVICE_UUID],
-  });
-
-  console.log('[printer] connecting GATT server...');
-  const server = await device.gatt.connect();
-
-  console.log('[printer] getting primary service...');
-  const service = await server.getPrimaryService(SERVICE_UUID);
-
-  console.log('[printer] getting characteristics...');
-  const writeChar = await service.getCharacteristic(WRITE_CHAR_UUID);
-  const notifyCharA = await service.getCharacteristic(NOTIFY_CHAR_UUID_A);
-  const notifyCharB = await service.getCharacteristic(NOTIFY_CHAR_UUID_B);
-
-  state = { device, server, writeChar, credit: 0 };
-
-  // Credit-grant notifications arrive on ff03. Per the actual working
-  // reference handler (examples/handlers/browser-handler.js), there's
-  // a special case: a grant of exactly 4 SETS credits to 4 rather
-  // than adding to it. Matching that exactly here.
-  await notifyCharA.startNotifications();
-  notifyCharA.addEventListener('characteristicvaluechanged', (event) => {
-    const bytes = new Uint8Array(event.target.value.buffer);
-    if (bytes.length >= 2 && bytes[0] === 0x01) {
-      if (bytes[1] === 0x04) {
-        state.credit = 4;
-      } else {
-        state.credit += bytes[1];
-      }
-      console.log('[printer] credit granted, total credit =', state.credit);
-    } else {
-      console.log('[printer] notify (ff03):', bytes);
-    }
-  });
-
-  await notifyCharB.startNotifications();
-  notifyCharB.addEventListener('characteristicvaluechanged', (event) => {
-    console.log('[printer] notify (ff01):', new Uint8Array(event.target.value.buffer));
-  });
-
-  device.addEventListener('gattserverdisconnected', () => {
-    console.log('[printer] disconnected');
-    state = null;
-  });
-
-  console.log('[printer] connected.');
-  return device;
 }
 
 export async function disconnectPrinter() {
-  if (state?.device?.gatt?.connected) {
-    state.device.gatt.disconnect();
-  }
-  state = null;
+  const session = state;
+  if (!session?.connection) return;
+  await session.connection.disconnect();
+  if (state === session) state = null;
 }
 
 export function isPrinterConnected() {
-  return !!state?.device?.gatt?.connected;
+  return Boolean(state?.connection);
 }
 
 function toUint8Array(bufferLike) {
@@ -152,17 +85,15 @@ function concatBuffers(buffers) {
  * them, corrupting the print (this turned out to matter more than
  * any calibration step).
  */
-async function sendPaced(bufferLike) {
-  if (!state?.writeChar) throw new Error('Printer is not connected.');
+async function sendPaced(session, bufferLike) {
   let bytes = toUint8Array(bufferLike);
   console.log('[printer] sending', bytes.length, 'bytes...');
 
   while (bytes.length > 0) {
     let waited = 0;
-    while (state.credit <= 0) {
+    while (state === session && session.credit <= 0) {
       await new Promise((resolve) => setTimeout(resolve, 15));
       waited += 15;
-      if (!state) throw new Error('Printer disconnected mid-transfer.');
       if (waited > 5000) {
         throw new Error(
           'Timed out waiting for printer credit — the connection may be in a stuck state. Try Disconnect, then Connect again.'
@@ -170,10 +101,12 @@ async function sendPaced(bufferLike) {
       }
     }
 
+    if (state !== session) throw new Error('Printer disconnected mid-transfer.');
+
     const size = Math.min(CHUNK_SIZE, bytes.length);
     const chunk = bytes.slice(0, size);
-    await state.writeChar.writeValueWithoutResponse(chunk);
-    state.credit -= 1;
+    session.credit -= 1;
+    await session.connection.write(chunk);
     bytes = bytes.slice(size);
 
     // Mandatory pacing delay, matching the reference handler exactly.
@@ -193,7 +126,8 @@ async function sendPaced(bufferLike) {
  *   paperType: 0x10 continuous / 0x20 gap label / 0x30 black mark
  */
 export async function printLabel(canvas, options = {}) {
-  if (!isPrinterConnected()) throw new Error('Printer is not connected.');
+  const session = state;
+  if (!session?.connection) throw new Error('Printer is not connected.');
 
   if (canvas.width !== REQUIRED_IMAGE_WIDTH) {
     throw new Error(
@@ -216,7 +150,7 @@ export async function printLabel(canvas, options = {}) {
   // Configuration commands must be sent outside the print-job payload.
   // Sending setSpeed alongside startPrintjob causes some firmware versions
   // to ignore the setting and retain the previous speed.
-  await sendPaced(PrintPort.setSpeed(PRINT_SPEED));
+  await sendPaced(session, PrintPort.setSpeed(PRINT_SPEED));
   await new Promise((resolve) => setTimeout(resolve, 100));
 
   // README "Method 2: Advanced Usage" — one concatenated payload,
@@ -230,7 +164,7 @@ export async function printLabel(canvas, options = {}) {
     PrintPort.alignPaperEnd(),
   ]);
 
-  await sendPaced(payload);
+  await sendPaced(session, payload);
   console.log('[printer] print job complete.');
 }
 
@@ -239,8 +173,8 @@ export async function printLabel(canvas, options = {}) {
  * debugging from the browser console via window.printerDebug.
  */
 export async function sendRawCommand(bytes) {
-  if (!state?.writeChar) throw new Error('Printer is not connected.');
-  await state.writeChar.writeValueWithoutResponse(new Uint8Array(bytes));
+  if (!state?.connection) throw new Error('Printer is not connected.');
+  await state.connection.write(new Uint8Array(bytes));
 }
 
 /**
@@ -258,14 +192,14 @@ export async function sendRawCommand(bytes) {
  * @param {number} distanceMm small nudge distance in mm (default 2)
  */
 export async function nudgePaper(direction, distanceMm = 2) {
-  if (!state?.writeChar) throw new Error('Printer is not connected.');
+  if (!state?.connection) throw new Error('Printer is not connected.');
   const mode = direction === 'forward' ? 0x01 : 0x11; // mm units, per printer-commands.js docstring
   await sendRawCommand(Array.from(toUint8Array(PrintPort.adjustPosition(mode, distanceMm))));
 }
 
 /** Snaps the paper back to the start of the current/next label. */
 export async function alignToLabelStart() {
-  if (!state?.writeChar) throw new Error('Printer is not connected.');
+  if (!state?.connection) throw new Error('Printer is not connected.');
   await sendRawCommand(Array.from(toUint8Array(PrintPort.alignPaperStart())));
 }
 
