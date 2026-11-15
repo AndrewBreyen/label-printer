@@ -79,6 +79,17 @@ preview reflects the current setting.
 
 The iOS app bundles the label editor locally and connects to the MarkLife P50S using native Bluetooth Low Energy. It requires iOS 15 or later. Building it requires a Mac with Xcode 26 or later and Node.js 22 or later.
 
+Run `npm ci` once. Find your paired iPhone with `xcrun devicectl list devices` and put your IDs in the Git-ignored `.env.ios.local` file:
+
+```sh
+IOS_DEVELOPMENT_TEAM=YOUR_TEAM_ID
+IOS_DEVICE_ID=YOUR_DEVICE_ID
+```
+
+Run `./build-ios.sh` to build, sign, and install. Export either variable or pass a device as an argument to override the local file.
+
+To build and install through Xcode instead:
+
 1. Run `npm ci`, then `npm run ios:sync` to build the web assets and sync them to the Xcode project.
 2. Run `npm run ios:open`. In Xcode, choose the **App** target and select your team under **Signing & Capabilities**. A free Apple account works for personal device testing.
 3. Connect and unlock your iPhone, select it as the run destination, and press **Run**. Enable Developer Mode if the iPhone prompts you.
