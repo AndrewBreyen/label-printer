@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { isNativeIOS, REQUIRED_IMAGE_WIDTH } from '../../services/printerService';
-import { LABEL_TEMPLATES, DEFAULT_TEMPLATE_NAME } from '../../utils/labelTemplates';
+import { CONTENT_WIDTH, LABEL_TEMPLATES, DEFAULT_TEMPLATE_NAME } from '../../utils/labelTemplates';
 import { getMarkdownContentHeight } from '../../utils/markdown';
 import { PX_PER_MM } from '../../utils/barcodeUtils';
 import { MODE_STOCK_GROUP, STOCK_GROUPS } from '../../config/appConfig';
@@ -24,9 +24,12 @@ export default function App() {
     receipt58: 'receipt',
     continuous15: 'text',
   });
+  const [minimumLengthMm, setMinimumLengthMm] = useState(null);
   const [templateName, setTemplateName] = useState(DEFAULT_TEMPLATE_NAME);
   const [status, setStatus] = useState('');
   const isReceiptMode = mode === 'receipt';
+  const isPrep15Mode = mode === 'prep15';
+  const isContinuousMarkdownMode = isReceiptMode || isPrep15Mode;
   const template = LABEL_TEMPLATES[templateName];
   const editorState = useLabelEditor({
     mode,
@@ -37,15 +40,19 @@ export default function App() {
   });
   const { markdownContent, fontFamily, fontScale, marginMm } = editorState;
   const marginPx = marginMm * PX_PER_MM;
-  const contentWidth = isReceiptMode ? LABEL_WIDTH : template.width;
+  const contentWidth = isReceiptMode ? LABEL_WIDTH : isPrep15Mode ? CONTENT_WIDTH : template.width;
   const contentLeft = isReceiptMode ? 0 : LABEL_WIDTH - contentWidth;
-  const contentHeight = isReceiptMode
+  const naturalContentHeight = isContinuousMarkdownMode
     ? getMarkdownContentHeight(markdownContent, contentWidth, fontFamily, fontScale, marginPx) + 32
     : template.contentHeight;
-  const feedHeight = isReceiptMode ? contentHeight : template.feedHeight;
+  const contentHeight = isPrep15Mode
+    ? Math.max(naturalContentHeight, Math.ceil((minimumLengthMm ?? 0) * PX_PER_MM))
+    : naturalContentHeight;
+  const feedHeight = isContinuousMarkdownMode ? contentHeight : template.feedHeight;
   const printing = useLabelPrinting({
     mode,
-    isReceiptMode,
+    isContinuousMarkdownMode,
+    minimumLengthMm,
     markdownContent,
     contentWidth,
     contentLeft,
@@ -58,6 +65,18 @@ export default function App() {
     setStatus,
   });
   const { printer, preview, canvases, showRuler } = printing;
+  const minimumLength = {
+    minimumLengthMm,
+    naturalLengthMm:
+      mode === 'prep15'
+        ? naturalContentHeight / PX_PER_MM
+        : mode === 'text'
+          ? preview.textLengthMm
+          : mode === 'barcode'
+            ? preview.barcodeLengthMm
+            : null,
+    setMinimumLengthMm,
+  };
   const activeMode = STOCK_GROUPS.find((group) => group.id === stockGroup)?.modes.find(
     (option) => option.id === mode
   );
@@ -113,12 +132,14 @@ export default function App() {
           image={printing.editor.image}
           barcode={printing.editor.barcode}
           text={printing.editor.text}
+          minimumLength={minimumLength}
         />
         <LabelPreview
           mode={mode}
           stockGroup={stockGroup}
           barcodeLengthMm={preview.barcodeLengthMm}
           textLengthMm={preview.textLengthMm}
+          markdownLengthMm={isPrep15Mode ? contentHeight / PX_PER_MM : null}
           preview={
             <PreviewCanvas
               mode={mode}

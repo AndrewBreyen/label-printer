@@ -9,7 +9,7 @@ import { CONTINUOUS_PAPER_TYPE } from '../utils/barcodeUtils';
 
 export default function usePrinterActions({
   mode,
-  isReceiptMode,
+  isContinuousMarkdownMode,
   drawLabel,
   drawBarcode,
   drawText,
@@ -67,7 +67,7 @@ export default function usePrinterActions({
       drawLabel();
       await printLabel(
         canvasRefs.label.current,
-        isReceiptMode ? { paperType: CONTINUOUS_PAPER_TYPE } : undefined
+        isContinuousMarkdownMode ? { paperType: CONTINUOUS_PAPER_TYPE } : undefined
       );
       setStatus('Label sent to printer.');
     } catch (err) {

@@ -1,7 +1,86 @@
 import React from 'react';
-import { MIN_LENGTH_MM } from '../../../utils/labelTemplates';
-import { MAX_TEXT_LABEL_LENGTH_MM } from '../../../utils/textLabelUtils';
+import { MIN_LENGTH_MM, MAX_CONTINUOUS_LENGTH_MM } from '../../../utils/labelTemplates';
 import MarkdownHelp from './MarkdownHelp';
+
+function MinimumLengthControl({ minimumLength }) {
+  const [error, setError] = React.useState('');
+  const [isEditing, setIsEditing] = React.useState(false);
+  const displayLength = minimumLength.minimumLengthMm ?? minimumLength.naturalLengthMm;
+  const [draftLength, setDraftLength] = React.useState(
+    Number.isFinite(displayLength) ? String(displayLength) : ''
+  );
+
+  React.useEffect(() => {
+    if (!isEditing) {
+      setDraftLength(Number.isFinite(displayLength) ? String(displayLength) : '');
+    }
+  }, [displayLength, isEditing]);
+
+  const handleChange = (event) => {
+    const rawValue = event.target.value;
+    setDraftLength(rawValue);
+    if (!rawValue) {
+      setError('');
+      return;
+    }
+
+    const value = Number(rawValue);
+    if (
+      !Number.isFinite(value) ||
+      value < MIN_LENGTH_MM ||
+      value > MAX_CONTINUOUS_LENGTH_MM
+    ) {
+      setError(
+        `Enter a length between ${MIN_LENGTH_MM} and ${MAX_CONTINUOUS_LENGTH_MM} mm.`
+      );
+      return;
+    }
+
+    minimumLength.setMinimumLengthMm(value);
+    setError('');
+  };
+
+  const handleFitContent = () => {
+    minimumLength.setMinimumLengthMm(null);
+    setError('');
+  };
+
+  return (
+    <div className="field">
+      <label htmlFor="minimum-label-length">Minimum label length (mm)</label>
+      <div className="minimum-length-row">
+        <input
+          id="minimum-label-length"
+          type="number"
+          min={MIN_LENGTH_MM}
+          max={MAX_CONTINUOUS_LENGTH_MM}
+          step="any"
+          value={draftLength}
+          onFocus={() => setIsEditing(true)}
+          onChange={handleChange}
+          onBlur={() => {
+            setIsEditing(false);
+            if (!draftLength || error) {
+              setDraftLength(Number.isFinite(displayLength) ? String(displayLength) : '');
+              setError('');
+            }
+          }}
+          aria-invalid={Boolean(error)}
+        />
+        <button
+          type="button"
+          className="button button--quiet minimum-length-reset"
+          onClick={handleFitContent}
+          title="Use the shortest length that fits the current content"
+        >
+          Fit content
+        </button>
+      </div>
+      {error && <p className="inline-error" role="alert">{error}</p>}
+      <span className="hint">The label grows if the content needs more room.</span>
+    </div>
+  );
+}
 
 export function ImageControls({ image }) {
   return (
@@ -46,7 +125,7 @@ export function ImageControls({ image }) {
   );
 }
 
-export function PrepControls({ prep }) {
+export function PrepControls({ prep, minimumLength }) {
   return (
     <>
       <label className="field">
@@ -67,6 +146,9 @@ export function PrepControls({ prep }) {
           onChange={(event) => prep.setUseByDate(event.target.value)}
         />
       </label>
+      {minimumLength && (
+        <MinimumLengthControl minimumLength={minimumLength} />
+      )}
       <p className="hint">
         PREP shows the current date/time automatically. USE BY shows the date you pick above,
         paired with the current time — both refresh to the live time right before printing.
@@ -75,7 +157,7 @@ export function PrepControls({ prep }) {
   );
 }
 
-export function BarcodeControls({ barcode }) {
+export function BarcodeControls({ barcode, minimumLength }) {
   return (
     <>
       <label className="field">
@@ -89,12 +171,13 @@ export function BarcodeControls({ barcode }) {
         />
       </label>
       {barcode.error && <p className="inline-error" role="alert">{barcode.error}</p>}
+      <MinimumLengthControl minimumLength={minimumLength} />
       <p className="field-hint">Prints along the length of 15 mm continuous tape.</p>
     </>
   );
 }
 
-export function TextControls({ text }) {
+export function TextControls({ text, minimumLength }) {
   return (
     <>
       <label className="field">
@@ -109,19 +192,7 @@ export function TextControls({ text }) {
         />
         <MarkdownHelp />
       </label>
-      <label className="field">
-        <span>Minimum label length (mm)</span>
-        <input
-          type="number"
-          aria-label="Minimum label length (mm)"
-          min={MIN_LENGTH_MM}
-          max={MAX_TEXT_LABEL_LENGTH_MM}
-          step="1"
-          value={text.minimumLengthMm}
-          onChange={(event) => text.setMinimumLengthMm(Number(event.target.value))}
-        />
-        <span className="hint">The label grows automatically if the text needs more room.</span>
-      </label>
+      <MinimumLengthControl minimumLength={minimumLength} />
       {text.error && <p className="inline-error" role="alert">{text.error}</p>}
     </>
   );

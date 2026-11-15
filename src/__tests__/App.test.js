@@ -40,6 +40,9 @@ describe('text label mode', () => {
     expect(container.querySelector('.mode-tab.is-selected')).toHaveTextContent('Barcode');
     expect(screen.getByLabelText(/Value to encode \(CODE128\)/)).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Text' })).toBeInTheDocument();
+    expect(
+      Array.from(container.querySelectorAll('.mode-tab')).map((tab) => tab.textContent)
+    ).toEqual(['Text', 'Barcode', 'Prep label']);
   });
 
   test('keeps connection controls at the top and the floating print action separate', () => {
@@ -76,6 +79,64 @@ describe('text label mode', () => {
 
     selectMode('58 mm continuous', 'Image');
     expect(screen.getByLabelText('Image to print')).toBeInTheDocument();
+  });
+
+  test('reuses prep controls for a 15mm continuous label', () => {
+    const { container } = render(<App />);
+
+    selectMode('15 mm continuous', 'Prep label');
+
+    expect(screen.getByLabelText('Item name')).toBeInTheDocument();
+    expect(screen.getByLabelText('Use by date')).toBeInTheDocument();
+    const previewCanvas = container.querySelector('.preview canvas');
+    expect(previewCanvas).toHaveAttribute('width', '120');
+    expect(Number(previewCanvas.getAttribute('height'))).toBeGreaterThan(0);
+    expect(screen.getByText(/\d+\.\d mm/, { selector: '.preview-length' })).toBeInTheDocument();
+    expect(context.fillText).toHaveBeenCalledWith('PREP', expect.any(Number), expect.any(Number), 100);
+    expect(context.fillText).toHaveBeenCalledWith('USE BY', expect.any(Number), expect.any(Number), 100);
+  });
+
+  test('applies and resets the fit-content minimum for 15mm prep labels', () => {
+    const { container } = render(<App />);
+    selectMode('15 mm continuous', 'Prep label');
+
+    const lengthInput = screen.getByLabelText('Minimum label length (mm)');
+    const previewCanvas = container.querySelector('.preview canvas');
+    const naturalHeight = Number(previewCanvas.getAttribute('height'));
+    const naturalLength = Number(lengthInput.value);
+
+    fireEvent.change(lengthInput, { target: { value: '' } });
+    expect(lengthInput).toHaveValue(null);
+    fireEvent.change(lengthInput, { target: { value: '80' } });
+    expect(previewCanvas).toHaveAttribute('height', '640');
+    expect(container.querySelectorAll('canvas')[1]).toHaveAttribute('height', '640');
+    expect(screen.getByText('80.0 mm', { selector: '.preview-length' })).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Fit content' }));
+    expect(previewCanvas).toHaveAttribute('height', String(naturalHeight));
+    expect(lengthInput).toHaveValue(naturalLength);
+  });
+
+  test('applies and resets the fit-content minimum for 15mm barcodes', () => {
+    const { container } = render(<App />);
+    selectMode('15 mm continuous', 'Barcode');
+    fireEvent.change(screen.getByLabelText(/Value to encode \(CODE128\)/), {
+      target: { value: '12' },
+    });
+
+    const lengthInput = screen.getByLabelText('Minimum label length (mm)');
+    const previewCanvas = container.querySelector('.continuous-preview canvas');
+    const naturalHeight = Number(previewCanvas.getAttribute('height'));
+    const naturalLength = Number(lengthInput.value);
+
+    fireEvent.change(lengthInput, { target: { value: '25' } });
+    expect(previewCanvas).toHaveAttribute('height', '200');
+    expect(container.querySelectorAll('canvas')[2]).toHaveAttribute('height', '200');
+    expect(screen.getByText('25 mm', { selector: '.preview-length' })).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Fit content' }));
+    expect(previewCanvas).toHaveAttribute('height', String(naturalHeight));
+    expect(lengthInput).toHaveValue(naturalLength);
   });
 
   test('starts with default text rendered in the 15mm preview', () => {
@@ -139,8 +200,13 @@ describe('text label mode', () => {
     context.drawImage.mockClear();
 
     fireEvent.click(screen.getByRole('button', { name: 'Horizontal' }));
-    expect(screen.getByLabelText('Minimum label length (mm)')).toHaveValue(8);
-    expect(screen.getByText('8 mm', { selector: '.preview-length' })).toBeInTheDocument();
+    const lengthInput = screen.getByLabelText('Minimum label length (mm)');
+    const previewCanvas = container.querySelector('.continuous-preview canvas');
+    const naturalHeight = Number(previewCanvas.getAttribute('height'));
+    const naturalLength = Number(lengthInput.value);
+    expect(naturalLength).toBeGreaterThan(0);
+    expect(previewCanvas).toHaveAttribute('height', String(naturalHeight));
+    expect(container.querySelector('.preview-length')).toHaveTextContent(`${naturalLength} mm`);
     fireEvent.change(screen.getByLabelText('Minimum label length (mm)'), {
       target: { value: '20' },
     });
@@ -151,7 +217,13 @@ describe('text label mode', () => {
     );
     expect(screen.getByText('Alignment along label length')).toBeInTheDocument();
     expect(container.querySelector('.preview-length')).toHaveTextContent('20 mm');
+    expect(previewCanvas).toHaveAttribute('height', '160');
+    expect(container.querySelectorAll('canvas')[3]).toHaveAttribute('height', '160');
     expect(context.drawImage).toHaveBeenCalled();
     expect(context.rotate).not.toHaveBeenCalled();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Fit content' }));
+    expect(previewCanvas).toHaveAttribute('height', String(naturalHeight));
+    expect(lengthInput).toHaveValue(naturalLength);
   });
 });

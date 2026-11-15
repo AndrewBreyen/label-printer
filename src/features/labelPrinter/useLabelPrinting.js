@@ -11,7 +11,8 @@ const LABEL_WIDTH = REQUIRED_IMAGE_WIDTH;
 
 export default function useLabelPrinting({
   mode,
-  isReceiptMode,
+  isContinuousMarkdownMode,
+  minimumLengthMm,
   markdownContent,
   contentWidth,
   contentLeft,
@@ -25,13 +26,14 @@ export default function useLabelPrinting({
 }) {
   const [showRuler, setShowRuler] = useState(false);
   const image = useImageLabel({ mode, labelWidth: LABEL_WIDTH });
-  const barcode = useBarcodeLabel({ mode, labelWidth: LABEL_WIDTH });
+  const barcode = useBarcodeLabel({ mode, labelWidth: LABEL_WIDTH, minimumLengthMm });
   const text = useTextLabel({
     mode,
     labelWidth: LABEL_WIDTH,
     fontFamily,
     fontScale,
     marginMm,
+    minimumLengthMm,
   });
   const markdownCanvases = useMarkdownLabel({
     markdown: markdownContent,
@@ -47,7 +49,7 @@ export default function useLabelPrinting({
   });
   const printer = usePrinterActions({
     mode,
-    isReceiptMode,
+    isContinuousMarkdownMode,
     drawLabel: markdownCanvases.drawLabel,
     drawBarcode: barcode.drawLabel,
     drawText: text.drawLabel,
@@ -103,8 +105,6 @@ export default function useLabelPrinting({
         error: text.error,
         orientation: text.orientation,
         setOrientation: text.setOrientation,
-        minimumLengthMm: text.minimumLengthMm,
-        setMinimumLengthMm: text.setMinimumLengthMm,
         alignment: text.alignment,
         setAlignment: text.setAlignment,
       },

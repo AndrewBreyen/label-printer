@@ -12,7 +12,8 @@
  */
 export const PX_PER_MM = 8; // 203dpi ≈ 8px/mm — recalibrate against a ruler test if needed
 export const CONTENT_WIDTH = Math.round(15 * PX_PER_MM); // ~120px for a 15mm-wide label
-export const MIN_LENGTH_MM = 8; // shortest label the UI will let you set
+export const MIN_LENGTH_MM = 0;
+export const MAX_CONTINUOUS_LENGTH_MM = 1000;
 export const POST_PRINT_FEED_MM = 2; // extra unprinted stock to advance after each label
 
 /**

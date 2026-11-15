@@ -7,13 +7,14 @@ import {
   PX_PER_MM,
   TAPE_WIDTH_PX,
 } from '../../utils/barcodeUtils';
+import { MAX_CONTINUOUS_LENGTH_MM, MIN_LENGTH_MM } from '../../utils/labelTemplates';
 
 function clearCanvas(canvas, width) {
   canvas.width = width;
   canvas.height = 1;
 }
 
-export default function useBarcodeLabel({ mode, labelWidth }) {
+export default function useBarcodeLabel({ mode, labelWidth, minimumLengthMm }) {
   const [value, setValue] = useState('412  0115711#$578=@;<');
   const [error, setError] = useState('');
   const [lengthMm, setLengthMm] = useState(null);
@@ -35,6 +36,20 @@ export default function useBarcodeLabel({ mode, labelWidth }) {
       return;
     }
 
+    if (
+      minimumLengthMm !== null &&
+      (!Number.isFinite(minimumLengthMm) ||
+        minimumLengthMm < MIN_LENGTH_MM ||
+        minimumLengthMm > MAX_CONTINUOUS_LENGTH_MM)
+    ) {
+      setError(
+        `Minimum label length must be between ${MIN_LENGTH_MM} and ${MAX_CONTINUOUS_LENGTH_MM} mm.`
+      );
+      clearCanvas(printCanvas, labelWidth);
+      clearCanvas(previewCanvas, TAPE_WIDTH_PX);
+      return;
+    }
+
     let barcode;
     try {
       barcode = generateBarcodeCanvas(barcodeValue, BARCODE_HEIGHT_PX);
@@ -45,7 +60,10 @@ export default function useBarcodeLabel({ mode, labelWidth }) {
       return;
     }
 
-    const printLength = barcode.width;
+    const printLength = Math.max(
+      barcode.width,
+      Math.ceil((minimumLengthMm ?? 0) * PX_PER_MM)
+    );
     setLengthMm(printLength / PX_PER_MM);
 
     printCanvas.width = labelWidth;
@@ -65,7 +83,7 @@ export default function useBarcodeLabel({ mode, labelWidth }) {
     previewContext.fillRect(0, 0, previewCanvas.width, previewCanvas.height);
     previewContext.translate(BARCODE_SIDE_MARGIN_PX, 0);
     drawRotatedBarcode(previewContext, barcode);
-  }, [labelWidth, value]);
+  }, [labelWidth, minimumLengthMm, value]);
 
   useEffect(() => {
     if (mode === 'barcode') drawLabel();

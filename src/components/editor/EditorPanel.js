@@ -23,6 +23,7 @@ export default function EditorPanel({
   prep,
   barcode,
   text,
+  minimumLength,
 }) {
   return (
     <div className="panel">
@@ -62,9 +63,13 @@ export default function EditorPanel({
         </p>
       )}
       {mode === 'image' && <ImageControls image={image} />}
-      {mode === 'prep' && <PrepControls prep={prep} />}
-      {mode === 'barcode' && <BarcodeControls barcode={barcode} />}
-      {mode === 'text' && <TextControls text={text} />}
+      {(mode === 'prep' || mode === 'prep15') && (
+        <PrepControls prep={prep} minimumLength={mode === 'prep15' ? minimumLength : null} />
+      )}
+      {mode === 'barcode' && (
+        <BarcodeControls barcode={barcode} minimumLength={minimumLength} />
+      )}
+      {mode === 'text' && <TextControls text={text} minimumLength={minimumLength} />}
     </div>
   );
 }

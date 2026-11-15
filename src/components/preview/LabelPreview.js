@@ -6,6 +6,7 @@ export default function LabelPreview({
   stockGroup,
   barcodeLengthMm,
   textLengthMm,
+  markdownLengthMm,
   preview,
   showRuler,
   rulerCanvasRef,
@@ -28,6 +29,8 @@ export default function LabelPreview({
           <span className="preview-length">
             {mode === 'barcode' ? barcodeLengthMm : textLengthMm} mm
           </span>
+        ) : mode === 'prep15' && markdownLengthMm !== null ? (
+          <span className="preview-length">{markdownLengthMm.toFixed(1)} mm</span>
         ) : null}
       </div>
       {preview || (

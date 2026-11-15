@@ -101,7 +101,7 @@ export default function useLabelEditor({
   };
 
   useEffect(() => {
-    if (mode !== 'prep') return;
+    if (mode !== 'prep' && mode !== 'prep15') return;
 
     const [year, month, day] = prepUseByDate.split('-').map(Number);
     const useByLabel =

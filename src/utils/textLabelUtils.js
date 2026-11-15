@@ -1,4 +1,4 @@
-import { MIN_LENGTH_MM } from './labelTemplates';
+import { MAX_CONTINUOUS_LENGTH_MM, MIN_LENGTH_MM } from './labelTemplates';
 import { PX_PER_MM, TAPE_WIDTH_PX } from './barcodeUtils';
 import {
   getMarkdownContentHeight,
@@ -6,7 +6,7 @@ import {
   renderMarkdownContent,
 } from './markdown';
 
-export const MAX_TEXT_LABEL_LENGTH_MM = 1000;
+export const MAX_TEXT_LABEL_LENGTH_MM = MAX_CONTINUOUS_LENGTH_MM;
 
 /** Creates a 15mm-wide label canvas in rotated or normal text orientation. */
 export function generateTextCanvas(

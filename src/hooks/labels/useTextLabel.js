@@ -4,7 +4,6 @@ import {
   PX_PER_MM,
   TAPE_WIDTH_PX,
 } from '../../utils/barcodeUtils';
-import { MIN_LENGTH_MM } from '../../utils/labelTemplates';
 import { generateTextCanvas } from '../../utils/textLabelUtils';
 
 export default function useTextLabel({
@@ -13,12 +12,12 @@ export default function useTextLabel({
   fontFamily,
   fontScale,
   marginMm,
+  minimumLengthMm,
 }) {
   const [value, setValue] = useState('# Hello World');
   const [error, setError] = useState('');
   const [lengthMm, setLengthMm] = useState(null);
   const [orientation, setOrientation] = useState('rotated');
-  const [minimumLengthMm, setMinimumLengthMm] = useState(MIN_LENGTH_MM);
   const [alignment, setAlignment] = useState('start');
   const printCanvasRef = useRef(null);
   const previewCanvasRef = useRef(null);
@@ -36,7 +35,10 @@ export default function useTextLabel({
     previewCanvas.height = 1;
 
     if (!value.trim()) {
-      previewCanvas.height = Math.max(1, Math.round(minimumLengthMm * PX_PER_MM));
+      previewCanvas.height = Math.max(
+        1,
+        Math.ceil((minimumLengthMm ?? 0) * PX_PER_MM)
+      );
       const context = previewCanvas.getContext('2d');
       if (!context) throw new Error('Could not create the text label preview canvas.');
       context.fillStyle = '#ffffff';
@@ -46,7 +48,7 @@ export default function useTextLabel({
 
     const textCanvas = generateTextCanvas(value, {
       orientation,
-      minimumLengthMm,
+      minimumLengthMm: minimumLengthMm ?? 0,
       alignment,
       fontFamily,
       fontScale,
@@ -108,8 +110,6 @@ export default function useTextLabel({
     lengthMm,
     orientation,
     setOrientation,
-    minimumLengthMm,
-    setMinimumLengthMm,
     alignment,
     setAlignment,
     printCanvasRef,

@@ -21,10 +21,11 @@ export const STOCK_GROUPS = [
   {
     id: 'continuous15',
     title: '15 mm continuous',
-    description: 'Narrow tape for text and barcodes',
+    description: 'Narrow tape for prep labels, text, and barcodes',
     modes: [
       { id: 'text', label: 'Text' },
       { id: 'barcode', label: 'Barcode' },
+      { id: 'prep15', label: 'Prep label' },
     ],
   },
 ];
@@ -34,6 +35,7 @@ export const MODE_STOCK_GROUP = {
   prep: 'small',
   receipt: 'receipt58',
   image: 'receipt58',
+  prep15: 'continuous15',
   text: 'continuous15',
   barcode: 'continuous15',
 };

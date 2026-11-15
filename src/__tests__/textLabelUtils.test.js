@@ -42,6 +42,12 @@ describe('generateTextCanvas', () => {
     expect(context.fillText).toHaveBeenCalledWith('Hi', 10, 21.5, 140);
   });
 
+  test('sizes text to its natural content length without an 8mm floor', () => {
+    const canvas = generateTextCanvas('Hi', { orientation: 'normal' });
+
+    expect(canvas.height).toBe(43);
+  });
+
   test('renders normal text without rotating and uses label length as canvas height', () => {
     const canvas = generateTextCanvas('Hello', {
       orientation: 'normal',
@@ -76,9 +82,9 @@ describe('generateTextCanvas', () => {
       marginMm: 0,
     });
 
-    expect(canvas.width).toBe(64);
+    expect(canvas.width).toBe(20);
     expect(context.font).toBe('bold 40px serif');
-    expect(context.fillText).toHaveBeenCalledWith('Hi', 0, 26, 64);
+    expect(context.fillText).toHaveBeenCalledWith('Hi', 0, 26, 20);
   });
 
   test('rejects margins that leave no room for text', () => {
@@ -112,8 +118,8 @@ describe('generateTextCanvas', () => {
   });
 
   test('rejects invalid label lengths', () => {
-    expect(() => generateTextCanvas('Hi', { minimumLengthMm: 1 })).toThrow(
-      'Minimum label length must be between 8 and 1000 mm.'
+    expect(() => generateTextCanvas('Hi', { minimumLengthMm: -1 })).toThrow(
+      'Minimum label length must be between 0 and 1000 mm.'
     );
   });
 });
